@@ -151,6 +151,7 @@ class LoginOIDC extends \Piwik\Plugin
 
     /**
      * Temporarily override logout url to the oidc provider end user session endpoint.
+     * See: https://openid.net/specs/openid-connect-rpinitiated-1_0.html
      *
      * @return void
      */
@@ -158,17 +159,20 @@ class LoginOIDC extends \Piwik\Plugin
     {
         $settings = new SystemSettings();
         $endSessionUrl = $settings->endSessionUrl->getValue();
-        if (!empty($endSessionUrl) && $_SESSION["loginoidc_auth"]) {
+        if (!empty($endSessionUrl) && !empty($_SESSION["loginoidc_auth"])) {
             // make sure we properly unset the plugins session variable
             unset($_SESSION['loginoidc_auth']);
             $endSessionUrl = new Url($endSessionUrl);
+            $endSessionUrl->setQueryParameter("client_id", $settings->clientId->getValue());
             if (isset($_SESSION["loginoidc_idtoken"])) {
                 $endSessionUrl->setQueryParameter("id_token_hint", $_SESSION["loginoidc_idtoken"]);
             }
-            $originalLogoutUrl = Config::getInstance()->General['login_logout_url'];
-            if ($originalLogoutUrl) {
-                $endSessionUrl->setQueryParameter("post_logout_redirect_uri", $originalLogoutUrl);
+            // come back to the configured logout url, or to Matomo like after a regular logout
+            $postLogoutRedirectUri = Config::getInstance()->General['login_logout_url'] ?? "";
+            if (empty($postLogoutRedirectUri)) {
+                $postLogoutRedirectUri = \Piwik\Url::getCurrentUrlWithoutQueryString();
             }
+            $endSessionUrl->setQueryParameter("post_logout_redirect_uri", $postLogoutRedirectUri);
             Config::getInstance()->General['login_logout_url'] = $endSessionUrl->buildString();
         }
     }

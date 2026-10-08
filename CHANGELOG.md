@@ -6,6 +6,7 @@
 * Security: Use PKCE (S256) for the authorization code flow.
 * Add option to disable password login, app token creation with the password and password resets for linked users.
 * Show the login button above the login form and add an option for its color.
+* Logout via the provider's end session endpoint now sends `client_id` and returns to Matomo, unless `login_logout_url` is configured.
 
 ### 4.1.2
 * Fix disabling OIDC for superusers not having any effect (#68).

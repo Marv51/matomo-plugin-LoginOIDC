@@ -73,6 +73,9 @@ fi
 
 console plugin:activate LoginOIDC
 
+# also log to tmp/logs/matomo.log, e.g. failed requests to the provider
+console config:set 'log.log_writers=["screen","file"]'
+
 # deliver all emails to Mailpit, the default senders like noreply@localhost:<port> are not valid addresses
 console config:set --section=General --key=noreply_email_address --value=noreply@example.com
 console config:set --section=General --key=login_password_recovery_replyto_email_address --value=no-reply@example.com
@@ -94,6 +97,7 @@ settings = {
     "scope": os.environ.get("OIDC_SCOPE") or "openid email",
     "redirectUriOverride": os.environ["MATOMO_URL"] + "/index.php?module=LoginOIDC&action=callback&provider=oidc",
     "allowSignup": "1",
+    "requireVerifiedEmail": "1",
     "allowedSignupDomains": os.environ.get("OIDC_ALLOWED_SIGNUP_DOMAINS", ""),
     "disablePasswordConfirmation": "1",
     "disablePasswordLogin": "1",

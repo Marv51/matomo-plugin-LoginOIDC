@@ -63,6 +63,13 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
     public $allowSignup;
 
     /**
+     * Whether new accounts require an email address verified by the remote service
+     *
+     * @var bool
+     */
+    public $requireVerifiedEmail;
+
+    /**
      * Bypass 2nd factor when login with OIDC
      *
      * @var bool
@@ -179,6 +186,7 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
         $this->disablePasswordLogin = $this->createDisablePasswordLoginSetting();
         $this->disableDirectLoginUrl = $this->createDisableDirectLoginUrlSetting();
         $this->allowSignup = $this->createAllowSignupSetting();
+        $this->requireVerifiedEmail = $this->createRequireVerifiedEmailSetting();
         $this->bypassTwoFa = $this->createBypassTwoFaSetting();
         $this->autoLinking = $this->createAutoLinkingSetting();
         $this->authenticationName = $this->createAuthenticationNameSetting();
@@ -263,6 +271,21 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
             $field->title = Piwik::translate("LoginOIDC_SettingAllowSignup");
             $field->description = Piwik::translate("LoginOIDC_SettingAllowSignupHelp");
             $field->uiControl = FieldConfig::UI_CONTROL_CHECKBOX;
+        });
+    }
+
+    /**
+     * Add requireVerifiedEmail setting.
+     *
+     * @return SystemSetting
+     */
+    private function createRequireVerifiedEmailSetting() : SystemSetting
+    {
+        return $this->makeSetting("requireVerifiedEmail", $default = true, FieldConfig::TYPE_BOOL, function(FieldConfig $field) {
+            $field->title = Piwik::translate("LoginOIDC_SettingRequireVerifiedEmail");
+            $field->description = Piwik::translate("LoginOIDC_SettingRequireVerifiedEmailHelp");
+            $field->uiControl = FieldConfig::UI_CONTROL_CHECKBOX;
+            $field->condition = "allowSignup";
         });
     }
 

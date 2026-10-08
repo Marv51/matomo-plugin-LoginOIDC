@@ -4,6 +4,8 @@
 * Security: Skipping password confirmations now requires a successful sign-in as the same user via LoginOIDC within the last 30 minutes. Previously any completed OAuth round trip disabled them for the rest of the session.
 * Security: Linking a remote account requires a recent password confirmation.
 * Security: Use PKCE (S256) for the authorization code flow.
+* Security: New users are only created if the provider confirms the email address as verified (`email_verified`). The new option "Only allow sign-up with verified email addresses" is on by default, turn it off for providers without this claim, e.g. GitHub.
+* Requests to the token and userinfo endpoints time out (10 seconds to connect, 30 seconds in total). Failures are logged with the HTTP status and the provider's error.
 * Add option to disable password login, app token creation with the password and password resets for linked users.
 * Show the login button above the login form and add an option for its color.
 * Logout via the provider's end session endpoint now sends `client_id` and returns to Matomo, unless `login_logout_url` is configured.

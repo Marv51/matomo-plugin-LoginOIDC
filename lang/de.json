@@ -47,6 +47,13 @@
         "ExceptionSuperUserOauthDisabled": "OAuth Login für Superuser ist deaktiviert.",
         "ExceptionAllowedSignupDomainsValidationFailed": "Die Liste der zugelassenen Domains hat nicht das richtige Format.",
         "ExceptionAllowedSignupDomainsDenied": "Die verwendete Domain ist nicht für Registrierungen freigeschaltet.",
-        "ExceptionAlreadyLinkedToDifferentAccount": "Der Benutzer beim OAuth-Service ist bereits mit einem anderem Matomo-Nutzer verlinkt."
+        "ExceptionAlreadyLinkedToDifferentAccount": "Der Benutzer beim OAuth-Service ist bereits mit einem anderem Matomo-Nutzer verlinkt.",
+        "SettingDisablePasswordLogin": "Deaktiviere Passwort-Login für verknüpfte Benutzer",
+        "SettingDisablePasswordLoginHelp": "Mit dem OpenID-Connect-Anbieter verknüpfte Benutzer können sich nur noch über den Anbieter anmelden: Passwort-Login, das Erstellen von App-Tokens mit dem Passwort und das Zurücksetzen des Passworts sind für sie deaktiviert. Superuser sind ausgenommen, solange der externe Login für Superuser deaktiviert ist. Behalte einen nicht verknüpften Superuser für den Fall, dass der Anbieter nicht erreichbar ist.",
+        "SettingButtonColor": "Farbe des Login-Buttons",
+        "SettingButtonColorHelp": "Optionale Hintergrundfarbe des Login-Buttons als Hex-Wert, z. B. #f97316. Die Textfarbe wird automatisch für den besten Kontrast gewählt.",
+        "ExceptionLinkRequiresPasswordConfirmation": "Zum Verknüpfen ist eine aktuelle Passwortbestätigung nötig. Bitte starte das Verknüpfen in deinen Sicherheitseinstellungen.",
+        "ExceptionPasswordLoginDisabled": "Der Passwort-Login ist für diesen Account deaktiviert. Bitte melde dich per Single Sign-on an.",
+        "ExceptionButtonColorValidationFailed": "Die Farbe des Login-Buttons muss ein Hex-Wert wie #f97316 sein."
     }
 }

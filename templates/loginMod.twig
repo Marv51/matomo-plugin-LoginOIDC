@@ -1,12 +1,23 @@
-{# This is right below the 'forgot password' #}
+{# This is right below the 'forgot password', on the login page it is moved above the login form #}
 
-<hr />
-
-<div class="center-align">
+<div class="loginoidc-login" id="loginoidc-login">
+    <div class="loginoidc-divider"><span>{{ 'General_Or'|translate }}</span></div>
     <form method="post" action="{{ linkTo({'module': 'LoginOIDC', 'action': 'signin'}) }}">
         <input type="hidden" name="form_nonce" value="{{ nonce }}" />
-        <button class="btn loginoidc-auth-button" type="submit">
+        <button class="btn loginoidc-auth-button{% if buttonColors %} loginoidc-auth-button--custom{% endif %}" type="submit"
+                {% if buttonColors %}style="--loginoidc-button-bg: {{ buttonColors.background }}; --loginoidc-button-fg: {{ buttonColors.text }};"{% endif %}>
             {{ caption }}
         </button>
     </form>
 </div>
+<script>
+    (function () {
+        var login = document.getElementById("loginoidc-login");
+        var form = document.getElementById("login_form");
+        if (login && form) {
+            // offer single sign-on first, the divider then separates it from the password form below
+            form.parentNode.insertBefore(login, form);
+            login.appendChild(login.querySelector(".loginoidc-divider"));
+        }
+    })();
+</script>

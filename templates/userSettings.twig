@@ -23,7 +23,7 @@
             <strong>{{ 'LoginOIDC_AccountNotLinked'|translate }}</strong>
             <br />
             <br />
-            <form method="post" action="{{ linkTo({'module': 'LoginOIDC', 'action': 'signin'}) }}">
+            <form method="post" action="{{ linkTo({'module': 'LoginOIDC', 'action': 'link'}) }}">
                 <input type="hidden" name="form_nonce" value="{{ nonce }}" />
                 <button class="btn" type="submit">
                     {{ 'LoginOIDC_Link'|translate }}

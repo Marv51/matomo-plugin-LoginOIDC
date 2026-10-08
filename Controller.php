@@ -108,8 +108,40 @@ class Controller extends \Piwik\Plugin\Controller
         $settings = new \Piwik\Plugins\LoginOIDC\SystemSettings();
         return $this->renderTemplate("loginMod", array(
             "caption" => $settings->authenticationName->getValue(),
+            "buttonColors" => $this->getButtonColors((string) $settings->buttonColor->getValue()),
             "nonce" => Nonce::getNonce(self::OIDC_NONCE)
         ));
+    }
+
+    /**
+     * Determine background and readable text color of the login button.
+     *
+     * @param  string  $color  Hex color like #f97316
+     * @return array|null      null to keep the default style
+     */
+    private function getButtonColors(string $color) : ?array
+    {
+        if (!preg_match(SystemSettings::BUTTON_COLOR_PATTERN, $color)) {
+            return null;
+        }
+        $hex = ltrim($color, "#");
+        if (strlen($hex) === 3) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+        // relative luminance, see https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
+        $luminance = 0;
+        foreach (array(0.2126, 0.7152, 0.0722) as $i => $weight) {
+            $channel = hexdec(substr($hex, $i * 2, 2)) / 255;
+            $channel = $channel <= 0.03928 ? $channel / 12.92 : pow(($channel + 0.055) / 1.055, 2.4);
+            $luminance += $weight * $channel;
+        }
+        // pick the text color with the higher contrast
+        $contrastWithWhite = 1.05 / ($luminance + 0.05);
+        $contrastWithBlack = ($luminance + 0.05) / 0.05;
+        return array(
+            "background" => "#" . $hex,
+            "text" => $contrastWithWhite >= $contrastWithBlack ? "#ffffff" : "#000000"
+        );
     }
 
     /**
@@ -168,13 +200,57 @@ class Controller extends \Piwik\Plugin\Controller
             throw new Exception(Piwik::translate("LoginOIDC_ExceptionNotConfigured"));
         }
 
+        unset($_SESSION["loginoidc_link"]);
+        $this->redirectToProvider($settings);
+    }
+
+    /**
+     * Start linking the currently signed in user with a remote user.
+     * Requires a recent password confirmation, so a hijacked session cannot be used
+     * to attach a foreign remote account to the signed in user.
+     *
+     * @return void
+     */
+    public function link()
+    {
+        Piwik::checkUserIsNotAnonymous();
+
+        $nonce = Request::fromRequest()->getStringParameter("form_nonce", "");
+        $params = array("module" => "LoginOIDC", "action" => "link", "form_nonce" => $nonce);
+        // redirects to the password confirmation and back here, if the password has not been confirmed recently
+        if (!$this->passwordVerify->requirePasswordVerifiedRecently($params)) {
+            throw new Exception(Piwik::translate("LoginOIDC_ExceptionLinkRequiresPasswordConfirmation"));
+        }
+        // csrf protection
+        Nonce::checkNonce(self::OIDC_NONCE, $nonce);
+
+        $settings = new \Piwik\Plugins\LoginOIDC\SystemSettings();
+        if (!$this->isPluginSetup($settings)) {
+            throw new Exception(Piwik::translate("LoginOIDC_ExceptionNotConfigured"));
+        }
+
+        $_SESSION["loginoidc_link"] = true;
+        $this->redirectToProvider($settings);
+    }
+
+    /**
+     * Redirect to the authorize url of the remote oauth service, using PKCE (RFC 7636).
+     *
+     * @param  SystemSettings  $settings
+     * @return void
+     */
+    private function redirectToProvider(SystemSettings $settings)
+    {
         $_SESSION["loginoidc_state"] = $this->generateKey(32);
+        $_SESSION["loginoidc_code_verifier"] = $this->generateKey(64);
         $params = array(
             "client_id" => $settings->clientId->getValue(),
             "scope" => $settings->scope->getValue(),
             "redirect_uri"=> $this->getRedirectUri(),
             "state" => $_SESSION["loginoidc_state"],
-            "response_type" => "code"
+            "response_type" => "code",
+            "code_challenge" => $this->getCodeChallenge($_SESSION["loginoidc_code_verifier"]),
+            "code_challenge_method" => "S256"
         );
         $url = $settings->authorizeUrl->getValue();
         $url .= (parse_url($url, PHP_URL_QUERY) ? "&" : "?") . http_build_query($params);
@@ -200,6 +276,11 @@ class Controller extends \Piwik\Plugin\Controller
             unset($_SESSION["loginoidc_state"]);
         }
 
+        // only valid for the flow started together with the matching state
+        $codeVerifier = $_SESSION["loginoidc_code_verifier"] ?? null;
+        $isLinkRequest = !empty($_SESSION["loginoidc_link"]);
+        unset($_SESSION["loginoidc_code_verifier"], $_SESSION["loginoidc_link"]);
+
         if (Request::fromGet()->getStringParameter("provider") !== "oidc") {
             throw new Exception(Piwik::translate("LoginOIDC_ExceptionUnknownProvider"));
         }
@@ -209,6 +290,7 @@ class Controller extends \Piwik\Plugin\Controller
             "client_id" => $settings->clientId->getValue(),
             "client_secret" => $settings->clientSecret->getValue(),
             "code" => Request::fromGet()->getStringParameter("code"),
+            "code_verifier" => $codeVerifier,
             "redirect_uri" => $this->getRedirectUri(),
             "grant_type" => "authorization_code",
             "state" => Request::fromGet()->getStringParameter("state")
@@ -235,8 +317,8 @@ class Controller extends \Piwik\Plugin\Controller
             throw new Exception(Piwik::translate("LoginOIDC_ExceptionInvalidResponse"));
         }
 
-        $_SESSION['loginoidc_idtoken'] = empty($result->id_token) ? null : $result->id_token;
-        $_SESSION['loginoidc_auth'] = true;
+        // only stored in the session once the user has been signed in, see signinAndRedirect()
+        $idToken = empty($result->id_token) ? null : $result->id_token;
 
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_HTTPHEADER, array(
@@ -276,9 +358,13 @@ class Controller extends \Piwik\Plugin\Controller
         if (empty($user)) {
             if (Piwik::isUserIsAnonymous()) {
                 // user with the remote id is currently not in our database
-                $this->signupUser($settings, $providerUserId, $result->email);
+                $this->signupUser($settings, $providerUserId, $result->email, $idToken);
             } else {
-                // link current user with the remote user
+                // link current user with the remote user, but only if the user started linking
+                // and has confirmed the password recently (see link())
+                if (!$isLinkRequest || !$this->passwordVerify->hasBeenVerified()) {
+                    throw new Exception(Piwik::translate("LoginOIDC_ExceptionLinkRequiresPasswordConfirmation"));
+                }
                 $this->linkAccount($providerUserId);
                 $this->redirectToIndex("UsersManager", "userSecurity");
             }
@@ -288,12 +374,16 @@ class Controller extends \Piwik\Plugin\Controller
                 if ($settings->disableSuperuser->getValue() && $this->hasTheUserSuperUserAccess($user["login"])) {
                     throw new Exception(Piwik::translate("LoginOIDC_ExceptionSuperUserOauthDisabled"));
                 } else {
-                    $this->signinAndRedirect($user, $settings);
+                    $this->signinAndRedirect($user, $settings, $idToken);
                 }
             } else {
                 if (Piwik::getCurrentUserLogin() === $user["login"]) {
-                    $this->passwordVerify->setPasswordVerifiedCorrectly();
-                    return;
+                    $this->rememberRemoteAuthentication($user["login"]);
+                    if ($this->passwordVerify->hasPasswordVerifyBeenRequested()) {
+                        // redirects back to the action which requested the password confirmation
+                        $this->passwordVerify->setPasswordVerifiedCorrectly();
+                    }
+                    $this->redirectToIndex("UsersManager", "userSecurity");
                 } else {
                     throw new Exception(Piwik::translate("LoginOIDC_ExceptionAlreadyLinkedToDifferentAccount"));
                 }
@@ -363,9 +453,10 @@ class Controller extends \Piwik\Plugin\Controller
      * @param  SystemSettings  $settings
      * @param  string          $providerUserId   Remote user id
      * @param  string          $matomoUserLogin  Users email address, will be used as username as well
+     * @param  string|null     $idToken          Id token returned by the token endpoint
      * @return void
      */
-    private function signupUser($settings, string $providerUserId, string $matomoUserLogin = null)
+    private function signupUser($settings, string $providerUserId, string $matomoUserLogin = null, ?string $idToken = null)
     {
         // only sign up user if setting is enabled
         if ($settings->allowSignup->getValue()) {
@@ -394,7 +485,7 @@ class Controller extends \Piwik\Plugin\Controller
             $userModel = new Model();
             $user = $userModel->getUser($matomoUserLogin);
             $this->linkAccount($providerUserId, $matomoUserLogin);
-            $this->signinAndRedirect($user, $settings);
+            $this->signinAndRedirect($user, $settings, $idToken);
         } else {
             throw new Exception(Piwik::translate("LoginOIDC_ExceptionUserNotFoundAndSignupDisabled"));
         }
@@ -403,19 +494,36 @@ class Controller extends \Piwik\Plugin\Controller
     /**
      * Sign in the given user and redirect to the front page.
      *
-     * @param  array  $user
+     * @param  array        $user
+     * @param  string|null  $idToken  Id token returned by the token endpoint
      * @return void
      */
-    private function signinAndRedirect(array $user, SystemSettings $settings)
+    private function signinAndRedirect(array $user, SystemSettings $settings, ?string $idToken = null)
     {
         $this->auth->setLogin($user["login"]);
         $this->auth->setForceLogin(true);
         $this->sessionInitializer->initSession($this->auth);
+        $_SESSION["loginoidc_idtoken"] = $idToken;
+        $_SESSION["loginoidc_auth"] = true;
+        $this->rememberRemoteAuthentication($user["login"]);
         if ($settings->bypassTwoFa->getValue()) {
             $sessionFingerprint = new SessionFingerprint();
             $sessionFingerprint->setTwoFactorAuthenticationVerified();
         }
         Url::redirectToUrl("index.php");
+    }
+
+    /**
+     * Remember that the given user has just been authenticated by the remote service.
+     * Allows skipping password confirmations for a limited time, see LoginOIDC::userRequiresPasswordConfirmation().
+     *
+     * @param  string  $login
+     * @return void
+     */
+    private function rememberRemoteAuthentication(string $login)
+    {
+        $_SESSION["loginoidc_verified_login"] = $login;
+        $_SESSION["loginoidc_verified_at"] = time();
     }
 
     /**
@@ -430,6 +538,18 @@ class Controller extends \Piwik\Plugin\Controller
         // http://docs.php.net/manual/pl/function.random-bytes.php#122766
         $length = ($length < 4) ? 4 : $length;
         return bin2hex(random_bytes(($length - ($length % 2)) / 2));
+    }
+
+    /**
+     * Derive the PKCE code challenge (S256) from a code verifier.
+     * See: https://datatracker.ietf.org/doc/html/rfc7636#section-4.2
+     *
+     * @param  string  $codeVerifier
+     * @return string
+     */
+    private function getCodeChallenge(string $codeVerifier) : string
+    {
+        return rtrim(strtr(base64_encode(hash("sha256", $codeVerifier, true)), "+/", "-_"), "=");
     }
 
     /**

@@ -16,6 +16,7 @@ use Piwik\Common;
 use Piwik\Config;
 use Piwik\Container\StaticContainer;
 use Piwik\Db;
+use Piwik\Log;
 use Piwik\Nonce;
 use Piwik\Piwik;
 use Piwik\Plugins\UsersManager\API as UsersManagerAPI;
@@ -34,6 +35,20 @@ class Controller extends \Piwik\Plugin\Controller
      * @var string
      */
     const OIDC_NONCE = "LoginOIDC.nonce";
+
+    /**
+     * Seconds to wait for the remote service to accept the connection.
+     *
+     * @var int
+     */
+    const HTTP_CONNECT_TIMEOUT = 10;
+
+    /**
+     * Seconds to wait for a complete response of the remote service.
+     *
+     * @var int
+     */
+    const HTTP_TIMEOUT = 30;
 
     /**
      * Auth implementation to login users.
@@ -241,18 +256,19 @@ class Controller extends \Piwik\Plugin\Controller
      */
     private function redirectToProvider(SystemSettings $settings)
     {
+        $provider = new ProviderConfiguration($settings);
         $_SESSION["loginoidc_state"] = $this->generateKey(32);
         $_SESSION["loginoidc_code_verifier"] = $this->generateKey(64);
         $params = array(
             "client_id" => $settings->clientId->getValue(),
-            "scope" => $settings->scope->getValue(),
+            "scope" => $provider->getScope(),
             "redirect_uri"=> $this->getRedirectUri(),
             "state" => $_SESSION["loginoidc_state"],
             "response_type" => "code",
             "code_challenge" => $this->getCodeChallenge($_SESSION["loginoidc_code_verifier"]),
             "code_challenge_method" => "S256"
         );
-        $url = $settings->authorizeUrl->getValue();
+        $url = $provider->getAuthorizeUrl();
         $url .= (parse_url($url, PHP_URL_QUERY) ? "&" : "?") . http_build_query($params);
         Url::redirectToUrl($url);
     }
@@ -269,6 +285,7 @@ class Controller extends \Piwik\Plugin\Controller
         if (!$this->isPluginSetup($settings)) {
             throw new Exception(Piwik::translate("LoginOIDC_ExceptionNotConfigured"));
         }
+        $provider = new ProviderConfiguration($settings);
 
         if ($_SESSION["loginoidc_state"] !== Request::fromGet()->getStringParameter("state")) {
             throw new Exception(Piwik::translate("LoginOIDC_ExceptionStateMismatch"));
@@ -295,46 +312,28 @@ class Controller extends \Piwik\Plugin\Controller
             "grant_type" => "authorization_code",
             "state" => Request::fromGet()->getStringParameter("state")
         );
-        $dataString = http_build_query($data);
-
-        $curl = curl_init();
-        curl_setopt($curl, CURLOPT_POST, 1);
-        curl_setopt($curl, CURLOPT_POSTFIELDS, $dataString);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-            "Content-Type: application/x-www-form-urlencoded",
-            "Content-Length: " . strlen($dataString),
-            "Accept: application/json",
-            "User-Agent: LoginOIDC-Matomo-Plugin"
-        ));
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_URL, $settings->tokenUrl->getValue());
         // request authorization token
-        $response = curl_exec($curl);
-        curl_close($curl);
-        $result = json_decode($response);
+        $result = $this->requestJson(
+            $provider->getTokenUrl(),
+            array("Content-Type: application/x-www-form-urlencoded"),
+            http_build_query($data)
+        );
 
-        if (empty($result) || empty($result->access_token)) {
+        if (empty($result->access_token)) {
             throw new Exception(Piwik::translate("LoginOIDC_ExceptionInvalidResponse"));
         }
 
         // only stored in the session once the user has been signed in, see signinAndRedirect()
         $idToken = empty($result->id_token) ? null : $result->id_token;
 
-        $curl = curl_init();
-        curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-            "Authorization: Bearer " . $result->access_token,
-            "Accept: application/json",
-            "User-Agent: LoginOIDC-Matomo-Plugin"
-        ));
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_URL, $settings->userinfoUrl->getValue());
         // request remote userinfo and remote user id
-        $response = curl_exec($curl);
-        curl_close($curl);
-        $result = json_decode($response);
+        $result = $this->requestJson(
+            $provider->getUserinfoUrl(),
+            array("Authorization: Bearer " . $result->access_token)
+        );
 
-        $userinfoId = $settings->userinfoId->getValue();
-        $providerUserId = $result->$userinfoId;
+        $userinfoId = $provider->getUserinfoId();
+        $providerUserId = $result->$userinfoId ?? null;
 
         if (empty($providerUserId)) {
             throw new Exception(Piwik::translate("LoginOIDC_ExceptionInvalidResponse"));
@@ -358,7 +357,7 @@ class Controller extends \Piwik\Plugin\Controller
         if (empty($user)) {
             if (Piwik::isUserIsAnonymous()) {
                 // user with the remote id is currently not in our database
-                $this->signupUser($settings, $providerUserId, $result->email, $idToken);
+                $this->signupUser($settings, $providerUserId, $result->email ?? null, $this->isEmailVerified($result), $idToken);
             } else {
                 // link current user with the remote user, but only if the user started linking
                 // and has confirmed the password recently (see link())
@@ -440,11 +439,7 @@ class Controller extends \Piwik\Plugin\Controller
      */
     private function isPluginSetup($settings) : bool
     {
-        return !empty($settings->authorizeUrl->getValue())
-            && !empty($settings->tokenUrl->getValue())
-            && !empty($settings->userinfoUrl->getValue())
-            && !empty($settings->clientId->getValue())
-            && !empty($settings->clientSecret->getValue());
+        return (new ProviderConfiguration($settings))->isComplete();
     }
 
     /**
@@ -453,16 +448,22 @@ class Controller extends \Piwik\Plugin\Controller
      * @param  SystemSettings  $settings
      * @param  string          $providerUserId   Remote user id
      * @param  string          $matomoUserLogin  Users email address, will be used as username as well
+     * @param  bool            $isEmailVerified  Whether the remote service confirmed the email address
      * @param  string|null     $idToken          Id token returned by the token endpoint
      * @return void
      */
-    private function signupUser($settings, string $providerUserId, string $matomoUserLogin = null, ?string $idToken = null)
+    private function signupUser($settings, string $providerUserId, string $matomoUserLogin = null, bool $isEmailVerified = false, ?string $idToken = null)
     {
         // only sign up user if setting is enabled
         if ($settings->allowSignup->getValue()) {
             // verify response contains email address
             if (empty($matomoUserLogin)) {
                 throw new Exception(Piwik::translate("LoginOIDC_ExceptionUserNotFoundAndNoEmail"));
+            }
+
+            // an unverified email address could belong to someone else, e.g. to pass the allowed domains
+            if ($settings->requireVerifiedEmail->getValue() && !$isEmailVerified) {
+                throw new Exception(Piwik::translate("LoginOIDC_ExceptionUserNotFoundAndEmailNotVerified"));
             }
 
             // verify email address domain is allowed to sign up
@@ -538,6 +539,64 @@ class Controller extends \Piwik\Plugin\Controller
         // http://docs.php.net/manual/pl/function.random-bytes.php#122766
         $length = ($length < 4) ? 4 : $length;
         return bin2hex(random_bytes(($length - ($length % 2)) / 2));
+    }
+
+    /**
+     * Send a request to the remote service and decode its json response.
+     * Failures are logged, without credentials, and shown as a generic error.
+     *
+     * @param  string       $url
+     * @param  array        $headers
+     * @param  string|null  $body     Form encoded body, sends a POST request
+     * @return object
+     * @throws Exception if the request fails or the response is no json object
+     */
+    private function requestJson(string $url, array $headers, ?string $body = null)
+    {
+        $curl = curl_init();
+        if ($body !== null) {
+            curl_setopt($curl, CURLOPT_POST, 1);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
+        }
+        curl_setopt($curl, CURLOPT_HTTPHEADER, array_merge($headers, array(
+            "Accept: application/json",
+            "User-Agent: LoginOIDC-Matomo-Plugin"
+        )));
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, self::HTTP_CONNECT_TIMEOUT);
+        curl_setopt($curl, CURLOPT_TIMEOUT, self::HTTP_TIMEOUT);
+        curl_setopt($curl, CURLOPT_URL, $url);
+        $response = curl_exec($curl);
+        $status = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($curl);
+
+        $result = is_string($response) ? json_decode($response) : null;
+        if ($response === false || $status < 200 || $status >= 300 || !is_object($result)) {
+            $details = $response === false ? $curlError : "HTTP " . $status;
+            // error responses (RFC 6749 section 5.2) only describe the problem, never contain credentials
+            if (is_object($result) && isset($result->error) && is_string($result->error)) {
+                $details .= ", " . $result->error;
+                if (isset($result->error_description) && is_string($result->error_description)) {
+                    $details .= ": " . $result->error_description;
+                }
+            }
+            Log::warning("LoginOIDC: request to " . $url . " failed (" . $details . ")");
+            throw new Exception(Piwik::translate("LoginOIDC_ExceptionInvalidResponse"));
+        }
+        return $result;
+    }
+
+    /**
+     * Whether the remote service confirmed that the email address belongs to the user (claim `email_verified`).
+     *
+     * @param  object  $userinfo
+     * @return bool
+     */
+    private function isEmailVerified($userinfo) : bool
+    {
+        $verified = $userinfo->email_verified ?? false;
+        // some providers send the boolean as string
+        return $verified === true || (is_string($verified) && strtolower($verified) === "true");
     }
 
     /**

@@ -73,6 +73,9 @@ fi
 
 console plugin:activate LoginOIDC
 
+# also log to tmp/logs/matomo.log, e.g. failed requests to the provider
+console config:set 'log.log_writers=["screen","file"]'
+
 # deliver all emails to Mailpit, the default senders like noreply@localhost:<port> are not valid addresses
 console config:set --section=General --key=noreply_email_address --value=noreply@example.com
 console config:set --section=General --key=login_password_recovery_replyto_email_address --value=no-reply@example.com
@@ -82,26 +85,19 @@ console config:set --section=mail --key=port --value=1025
 
 echo "Configuring LoginOIDC ..."
 python3 - <<'PY' | docker compose exec -T db mariadb -umatomo -pmatomo matomo
-import json
 import os
-import urllib.request
-
-with urllib.request.urlopen(os.environ["OIDC_DISCOVERY_URL"], timeout=15) as response:
-    discovery = json.load(response)
 
 settings = {
     "authenticationName": os.environ.get("OIDC_BUTTON_NAME") or "OIDC login",
     "buttonColor": os.environ.get("OIDC_BUTTON_COLOR", ""),
-    "authorizeUrl": discovery["authorization_endpoint"],
-    "tokenUrl": discovery["token_endpoint"],
-    "userinfoUrl": os.environ.get("OIDC_USERINFO_URL") or discovery["userinfo_endpoint"],
-    "endSessionUrl": discovery.get("end_session_endpoint", ""),
-    "userinfoId": os.environ.get("OIDC_USERINFO_ID") or "sub",
+    # the plugin reads the endpoints from the provider's discovery document
+    "issuerUrl": os.environ["OIDC_ISSUER"],
     "clientId": os.environ["OIDC_CLIENT_ID"],
     "clientSecret": os.environ["OIDC_CLIENT_SECRET"],
     "scope": os.environ.get("OIDC_SCOPE") or "openid email",
     "redirectUriOverride": os.environ["MATOMO_URL"] + "/index.php?module=LoginOIDC&action=callback&provider=oidc",
     "allowSignup": "1",
+    "requireVerifiedEmail": "1",
     "allowedSignupDomains": os.environ.get("OIDC_ALLOWED_SIGNUP_DOMAINS", ""),
     "disablePasswordConfirmation": "1",
     "disablePasswordLogin": "1",

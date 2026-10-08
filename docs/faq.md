@@ -32,6 +32,21 @@ Most likely you are using a very old Piwik installation, which still uses MyISAM
 Learn here on how to update the database engine:
 https://matomo.org/faq/troubleshooting/faq_25610/
 
+**Can Matomo read the endpoints from my provider (OpenID Connect discovery)?**
+
+Yes, if your provider publishes `/.well-known/openid-configuration`.
+Enter its domain or issuer URL in `Provider domain or issuer URL` and the endpoint fields are hidden.
+The user ID is then always `sub` and the scopes always include `openid`.
+The discovery is checked when saving the settings.
+
+- Auth0: `<USERNAME>.eu.auth0.com`
+- Keycloak: `https://<YOUR_KEYCLOAK_URL>/realms/<REALM>` (older versions: `/auth/realms/<REALM>`)
+- GitLab: `<YOUR_GITLAB_URL>`
+- Microsoft Entra ID (Azure AD): `https://login.microsoftonline.com/<TENANT_ID>/v2.0`
+- Authentik: `https://<YOUR_AUTHENTIK_URL>/application/o/<YOUR_AUTHENTIK_APPLICATION_SLUG>/`
+
+GitHub does not support discovery, leave the field empty and use the settings below.
+
 **What are the settings for ...?**
 
 - GitHub:

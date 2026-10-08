@@ -1,10 +1,10 @@
 {
     "name": "LoginOIDC",
-    "version": "5.0.0",
-    "description": "Adds support for integrating external authentication services",
+    "version": "5.1.0",
+    "description": "Adds support for integrating external authentication services (fork of dominik-th/matomo-plugin-LoginOIDC)",
     "keywords": ["authentication", "login", "oauth", "openid", "connect", "sso"],
     "license": "GPL v3+",
-    "homepage": "https://github.com/dominik-th/matomo-plugin-LoginOIDC",
+    "homepage": "https://github.com/Marv51/matomo-plugin-LoginOIDC",
     "authors": [
         {
             "name": "Dominik Thiemermann",
@@ -16,12 +16,8 @@
         "piwik": ">=5.0.0-b1,<6.0.0-b1",
         "php": ">=7.0.0"
     },
-    "donate": {
-        "paypal": "matomo-loginoidc@dthiemermann.org"
-    },
     "support": {
-        "email": "matomo-loginoidc@dthiemermann.org",
-        "issues": "https://github.com/dominik-th/matomo-plugin-LoginOIDC/issues",
-        "source": "https://github.com/dominik-th/matomo-plugin-LoginOIDC"
+        "issues": "https://github.com/Marv51/matomo-plugin-LoginOIDC/issues",
+        "source": "https://github.com/Marv51/matomo-plugin-LoginOIDC"
     }
 }

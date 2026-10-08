@@ -10,12 +10,16 @@
         "SettingDisableDirectLoginUrlHelp": "When checked, users have to inititate the login via the Matomo login page. Otherwise the login button can be embedded in third-party services.",
         "SettingAllowSignup": "Create new users when users try to log in with unknown OIDC accounts",
         "SettingAllowSignupHelp": "",
+        "SettingRequireVerifiedEmail": "Only allow sign-up with verified email addresses",
+        "SettingRequireVerifiedEmailHelp": "New users are only created if the provider confirms that the email address is verified (claim 'email_verified'). Otherwise users could enter someone else's address, e.g. to pass the domain restriction. Uncheck only for providers which do not send this claim, e.g. GitHub, and only if they verify email addresses themselves.",
         "SettingBypassTwoFa": "Disable second factor when sign in with OIDC",
         "SettingBypassTwoFaHelp": "",
         "SettingAuthenticationName": "Name",
         "SettingAuthenticationNameHelp": "Name of the authentication source which will be displayed on the login screen.",
         "SettingButtonColor": "Login button color",
         "SettingButtonColorHelp": "Optional background color of the login button as hex value, e.g. #f97316. The text color is chosen automatically for best contrast.",
+        "SettingIssuerUrl": "Provider domain or issuer URL (OpenID Connect discovery)",
+        "SettingIssuerUrlHelp": "Matomo reads the endpoints from the provider's discovery document (/.well-known/openid-configuration). Enter the domain, e.g. 'idp.example.com', or the issuer URL if it contains a path, e.g. 'https://keycloak.example.com/realms/matomo'. Leave empty to enter the endpoints manually, e.g. for GitHub.",
         "SettingAuthorizeUrl": "Authorize URL",
         "SettingAuthorizeUrlHelp": "e.g. https://<USERNAME>.eu.auth0.com/authorize",
         "SettingTokenUrl": "Token URL",
@@ -50,12 +54,14 @@
         "ExceptionInvalidResponse": "Unexpected response from OAuth service.",
         "ExceptionUserNotFoundAndSignupDisabled": "User not found. OAuth registrations are disabled.",
         "ExceptionUserNotFoundAndNoEmail": "User not found. User could not be created because the OAuth service did not return an email address.",
+        "ExceptionUserNotFoundAndEmailNotVerified": "User not found. User could not be created because the OAuth service did not confirm the email address as verified.",
         "ExceptionSuperUserOauthDisabled": "OAuth login disabled for superusers.",
         "ExceptionAllowedSignupDomainsValidationFailed": "Validation failed for the list of domains allowed for user creation.",
         "ExceptionAllowedSignupDomainsDenied": "The domain is currently not activated for account creation.",
         "ExceptionAlreadyLinkedToDifferentAccount": "The remote OAuth user is already linked to another account.",
         "ExceptionLinkRequiresPasswordConfirmation": "Linking requires a recent password confirmation. Please start linking from your security settings.",
         "ExceptionPasswordLoginDisabled": "Password login is disabled for this account. Please sign in via single sign-on.",
-        "ExceptionButtonColorValidationFailed": "The login button color has to be a hex color like #f97316."
+        "ExceptionButtonColorValidationFailed": "The login button color has to be a hex color like #f97316.",
+        "ExceptionDiscoveryFailed": "OpenID Connect discovery failed for %1$s: %2$s. Check the domain or issuer URL, or leave it empty and enter the endpoints manually."
     }
 }

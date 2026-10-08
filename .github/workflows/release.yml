@@ -1,0 +1,66 @@
+name: Release
+
+# Packages the plugin as zip: attached to the run for pull requests,
+# published as GitHub release when a version tag like v5.1.0 is pushed.
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      # create the release
+      contents: write
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Determine version
+        id: version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(jq -r .version plugin.json)
+          if [ -z "$version" ] || [ "$version" = "null" ]; then
+            echo "::error::plugin.json has no version"
+            exit 1
+          fi
+          if [ "$REF_TYPE" = "tag" ] && [ "$TAG" != "v$version" ]; then
+            echo "::error::Tag $TAG does not match version $version in plugin.json"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Build zip
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Matomo expects a single LoginOIDC/ folder, files only needed for development are left out
+          git archive --format=zip --prefix=LoginOIDC/ -o "LoginOIDC-$VERSION.zip" HEAD -- . ':!dev' ':!tests' ':!.github' ':!screenshots'
+          sha256sum "LoginOIDC-$VERSION.zip" > "LoginOIDC-$VERSION.zip.sha256"
+          unzip -l "LoginOIDC-$VERSION.zip"
+      - name: Upload zip
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: LoginOIDC-${{ steps.version.outputs.version }}
+          path: LoginOIDC-${{ steps.version.outputs.version }}.zip*
+      - name: Create release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # the release notes are the changelog entries of this version
+          awk -v heading="### $VERSION" '$0 == heading { found = 1; next } found && /^### / { exit } found' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::error::CHANGELOG.md has no section '### $VERSION'"
+            exit 1
+          fi
+          gh release create "$TAG" "LoginOIDC-$VERSION.zip" "LoginOIDC-$VERSION.zip.sha256" \
+            --title "LoginOIDC $VERSION" --notes-file notes.md

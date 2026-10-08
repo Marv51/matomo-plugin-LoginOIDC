@@ -16,11 +16,20 @@ OpenID Connect providers only need their domain or issuer URL, see the [FAQ](doc
 
 The Matomo Marketplace offers the original plugin, not this fork.
 
-Put the files from this repo in <MATOMO_INSTALLATION>/plugins/LoginOIDC and activate it in the settings. The `dev/` directory is not needed.
+Download `LoginOIDC-<version>.zip` from the [releases](https://github.com/Marv51/matomo-plugin-LoginOIDC/releases), extract it into <MATOMO_INSTALLATION>/plugins/ and activate the plugin in the settings.
+To update, replace the `LoginOIDC` folder.
 
 ## Local testing
 
 `dev/` contains a Docker setup with Matomo 5 to test the plugin against your provider, see [dev/README.md](dev/README.md).
+
+## Releasing
+
+1. Set the new version in `plugin.json` and add a matching `### <version>` section to the [changelog](CHANGELOG.md).
+2. Merge into `5.x-dev`, then tag the merge commit and push the tag, e.g. `git tag v5.1.0 && git push origin v5.1.0`.
+
+The release workflow checks that the tag matches `plugin.json`, builds the zip without `dev/`, `tests/`, `.github/` and `screenshots/`, and publishes a GitHub release with the zip, its SHA-256 checksum and the changelog section as notes.
+Pull requests get the zip attached to their workflow run, so packaging can be checked before a release.
 
 ## License
 

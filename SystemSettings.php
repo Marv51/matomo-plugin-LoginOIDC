@@ -21,6 +21,13 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
 {
 
     /**
+     * Hex colors like #f97316 or #f70, the only format allowed for the button color.
+     *
+     * @var string
+     */
+    const BUTTON_COLOR_PATTERN = "/^#([0-9a-f]{3}|[0-9a-f]{6})$/i";
+
+    /**
      * The disable superuser setting.
      *
      * @var bool
@@ -75,6 +82,13 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
      * @var string
      */
     public $authenticationName;
+
+    /**
+     * The optional background color of the login button.
+     *
+     * @var string
+     */
+    public $buttonColor;
 
     /**
      * The url where the external service authenticates the user.
@@ -161,6 +175,7 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
         $this->bypassTwoFa = $this->createBypassTwoFaSetting();
         $this->autoLinking = $this->createAutoLinkingSetting();
         $this->authenticationName = $this->createAuthenticationNameSetting();
+        $this->buttonColor = $this->createButtonColorSetting();
         $this->authorizeUrl = $this->createAuthorizeUrlSetting();
         $this->tokenUrl = $this->createTokenUrlSetting();
         $this->userinfoUrl = $this->createUserinfoUrlSetting();
@@ -282,6 +297,25 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
             $field->title = Piwik::translate("LoginOIDC_SettingAuthenticationName");
             $field->description = Piwik::translate("LoginOIDC_SettingAuthenticationNameHelp");
             $field->uiControl = FieldConfig::UI_CONTROL_TEXT;
+        });
+    }
+
+    /**
+     * Add button color setting.
+     *
+     * @return SystemSetting
+     */
+    private function createButtonColorSetting() : SystemSetting
+    {
+        return $this->makeSetting("buttonColor", $default = "", FieldConfig::TYPE_STRING, function(FieldConfig $field) {
+            $field->title = Piwik::translate("LoginOIDC_SettingButtonColor");
+            $field->description = Piwik::translate("LoginOIDC_SettingButtonColorHelp");
+            $field->uiControl = FieldConfig::UI_CONTROL_TEXT;
+            $field->validate = function ($value, $setting) {
+                if (!empty($value) && !preg_match(self::BUTTON_COLOR_PATTERN, $value)) {
+                    throw new Exception(Piwik::translate("LoginOIDC_ExceptionButtonColorValidationFailed"));
+                }
+            };
         });
     }
 

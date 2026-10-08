@@ -1,3 +1,35 @@
 .loginoidc-auth-button {
     width: 100%;
 }
+
+/* more specific than Matomo's button.btn, which also sets the text color with !important */
+button.btn.loginoidc-auth-button--custom,
+button.btn.loginoidc-auth-button--custom:hover,
+button.btn.loginoidc-auth-button--custom:focus {
+    background-color: var(--loginoidc-button-bg);
+    color: var(--loginoidc-button-fg) !important;
+}
+
+button.btn.loginoidc-auth-button--custom:hover {
+    filter: brightness(0.92);
+}
+
+.loginoidc-divider {
+    display: flex;
+    align-items: center;
+    margin: 1.5em 0;
+    color: var(--theme-color-text-light, #444);
+    font-size: 0.9em;
+    text-transform: uppercase;
+}
+
+.loginoidc-divider::before,
+.loginoidc-divider::after {
+    content: "";
+    flex: 1;
+    border-top: 1px solid var(--theme-color-border-alternative, #e0e0e0);
+}
+
+.loginoidc-divider span {
+    padding: 0 1em;
+}

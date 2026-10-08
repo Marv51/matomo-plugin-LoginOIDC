@@ -14,6 +14,8 @@
         "SettingBypassTwoFaHelp": "",
         "SettingAuthenticationName": "Name",
         "SettingAuthenticationNameHelp": "Name of the authentication source which will be displayed on the login screen.",
+        "SettingButtonColor": "Login button color",
+        "SettingButtonColorHelp": "Optional background color of the login button as hex value, e.g. #f97316. The text color is chosen automatically for best contrast.",
         "SettingAuthorizeUrl": "Authorize URL",
         "SettingAuthorizeUrlHelp": "e.g. https://<USERNAME>.eu.auth0.com/authorize",
         "SettingTokenUrl": "Token URL",
@@ -53,6 +55,7 @@
         "ExceptionAllowedSignupDomainsDenied": "The domain is currently not activated for account creation.",
         "ExceptionAlreadyLinkedToDifferentAccount": "The remote OAuth user is already linked to another account.",
         "ExceptionLinkRequiresPasswordConfirmation": "Linking requires a recent password confirmation. Please start linking from your security settings.",
-        "ExceptionPasswordLoginDisabled": "Password login is disabled for this account. Please sign in via single sign-on."
+        "ExceptionPasswordLoginDisabled": "Password login is disabled for this account. Please sign in via single sign-on.",
+        "ExceptionButtonColorValidationFailed": "The login button color has to be a hex color like #f97316."
     }
 }

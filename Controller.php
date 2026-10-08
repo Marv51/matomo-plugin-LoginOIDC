@@ -108,8 +108,40 @@ class Controller extends \Piwik\Plugin\Controller
         $settings = new \Piwik\Plugins\LoginOIDC\SystemSettings();
         return $this->renderTemplate("loginMod", array(
             "caption" => $settings->authenticationName->getValue(),
+            "buttonColors" => $this->getButtonColors((string) $settings->buttonColor->getValue()),
             "nonce" => Nonce::getNonce(self::OIDC_NONCE)
         ));
+    }
+
+    /**
+     * Determine background and readable text color of the login button.
+     *
+     * @param  string  $color  Hex color like #f97316
+     * @return array|null      null to keep the default style
+     */
+    private function getButtonColors(string $color) : ?array
+    {
+        if (!preg_match(SystemSettings::BUTTON_COLOR_PATTERN, $color)) {
+            return null;
+        }
+        $hex = ltrim($color, "#");
+        if (strlen($hex) === 3) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+        // relative luminance, see https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
+        $luminance = 0;
+        foreach (array(0.2126, 0.7152, 0.0722) as $i => $weight) {
+            $channel = hexdec(substr($hex, $i * 2, 2)) / 255;
+            $channel = $channel <= 0.03928 ? $channel / 12.92 : pow(($channel + 0.055) / 1.055, 2.4);
+            $luminance += $weight * $channel;
+        }
+        // pick the text color with the higher contrast
+        $contrastWithWhite = 1.05 / ($luminance + 0.05);
+        $contrastWithBlack = ($luminance + 0.05) / 0.05;
+        return array(
+            "background" => "#" . $hex,
+            "text" => $contrastWithWhite >= $contrastWithBlack ? "#ffffff" : "#000000"
+        );
     }
 
     /**

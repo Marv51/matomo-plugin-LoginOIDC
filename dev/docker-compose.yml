@@ -1,0 +1,44 @@
+# Local test environment for the LoginOIDC plugin: Matomo 5 + MariaDB.
+# Use ./setup.sh to start it, it also installs Matomo and configures the plugin.
+name: loginoidc-dev
+
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: matomo
+      MARIADB_USER: matomo
+      MARIADB_PASSWORD: matomo
+    volumes:
+      - db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 30
+
+  matomo:
+    image: matomo:5-apache
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${MATOMO_PORT:-8080}:80"
+    volumes:
+      - matomo:/var/www/html
+      # setup.sh symlinks this into plugins/LoginOIDC, so the image's entrypoint
+      # (which chowns /var/www/html) never touches the files on the host
+      - ..:/plugin-src:ro
+      # hide this directory, including .env with the client secret, from the web server
+      - type: tmpfs
+        target: /plugin-src/dev
+
+  # catches all emails Matomo sends, e.g. password resets
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "${MAILPIT_PORT:-8025}:8025"
+
+volumes:
+  db:
+  matomo:

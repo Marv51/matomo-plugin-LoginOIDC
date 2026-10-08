@@ -1,0 +1,2 @@
+# keep shell scripts runnable on checkouts with core.autocrlf
+*.sh text eol=lf

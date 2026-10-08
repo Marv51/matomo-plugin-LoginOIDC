@@ -91,6 +91,13 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
     public $buttonColor;
 
     /**
+     * The domain or issuer url to discover the endpoints from, empty to configure them manually.
+     *
+     * @var string
+     */
+    public $issuerUrl;
+
+    /**
      * The url where the external service authenticates the user.
      *
      * @var string
@@ -176,6 +183,7 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
         $this->autoLinking = $this->createAutoLinkingSetting();
         $this->authenticationName = $this->createAuthenticationNameSetting();
         $this->buttonColor = $this->createButtonColorSetting();
+        $this->issuerUrl = $this->createIssuerUrlSetting();
         $this->authorizeUrl = $this->createAuthorizeUrlSetting();
         $this->tokenUrl = $this->createTokenUrlSetting();
         $this->userinfoUrl = $this->createUserinfoUrlSetting();
@@ -320,6 +328,27 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
     }
 
     /**
+     * Add issuer url setting.
+     *
+     * @return SystemSetting
+     */
+    private function createIssuerUrlSetting() : SystemSetting
+    {
+        return $this->makeSetting("issuerUrl", $default = "", FieldConfig::TYPE_STRING, function(FieldConfig $field) {
+            $field->title = Piwik::translate("LoginOIDC_SettingIssuerUrl");
+            $field->description = Piwik::translate("LoginOIDC_SettingIssuerUrlHelp");
+            $field->uiControl = FieldConfig::UI_CONTROL_TEXT;
+            $field->validate = function ($value, $setting) {
+                if (empty(trim((string) $value))) {
+                    return;
+                }
+                // fails with a helpful message, if the provider does not support discovery
+                ProviderConfiguration::refreshDiscovery($value);
+            };
+        });
+    }
+
+    /**
      * Add authorization url setting.
      *
      * @return SystemSetting
@@ -330,6 +359,7 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
             $field->title = Piwik::translate("LoginOIDC_SettingAuthorizeUrl");
             $field->description = Piwik::translate("LoginOIDC_SettingAuthorizeUrlHelp");
             $field->uiControl = FieldConfig::UI_CONTROL_URL;
+            $field->condition = "!issuerUrl";
             $field->validators[] = new UrlLike();
         });
     }
@@ -345,6 +375,7 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
             $field->title = Piwik::translate("LoginOIDC_SettingTokenUrl");
             $field->description = Piwik::translate("LoginOIDC_SettingTokenUrlHelp");
             $field->uiControl = FieldConfig::UI_CONTROL_URL;
+            $field->condition = "!issuerUrl";
             $field->validators[] = new UrlLike();
         });
     }
@@ -360,6 +391,7 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
             $field->title = Piwik::translate("LoginOIDC_SettingUserinfoUrl");
             $field->description = Piwik::translate("LoginOIDC_SettingUserinfoUrlHelp");
             $field->uiControl = FieldConfig::UI_CONTROL_URL;
+            $field->condition = "!issuerUrl";
             $field->validators[] = new UrlLike();
         });
     }
@@ -375,6 +407,7 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
             $field->title = Piwik::translate("LoginOIDC_SettingEndSessionUrl");
             $field->description = Piwik::translate("LoginOIDC_SettingEndSessionUrlHelp");
             $field->uiControl = FieldConfig::UI_CONTROL_URL;
+            $field->condition = "!issuerUrl";
         });
     }
 
@@ -389,6 +422,7 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
             $field->title = Piwik::translate("LoginOIDC_SettingUserinfoId");
             $field->description = Piwik::translate("LoginOIDC_SettingUserinfoIdHelp");
             $field->uiControl = FieldConfig::UI_CONTROL_TEXT;
+            $field->condition = "!issuerUrl";
             $field->validators[] = new NotEmpty();
         });
     }

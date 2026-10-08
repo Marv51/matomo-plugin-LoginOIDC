@@ -16,6 +16,8 @@
         "SettingAuthenticationNameHelp": "Name of the authentication source which will be displayed on the login screen.",
         "SettingButtonColor": "Login button color",
         "SettingButtonColorHelp": "Optional background color of the login button as hex value, e.g. #f97316. The text color is chosen automatically for best contrast.",
+        "SettingIssuerUrl": "Provider domain or issuer URL (OpenID Connect discovery)",
+        "SettingIssuerUrlHelp": "Matomo reads the endpoints from the provider's discovery document (/.well-known/openid-configuration). Enter the domain, e.g. 'idp.example.com', or the issuer URL if it contains a path, e.g. 'https://keycloak.example.com/realms/matomo'. Leave empty to enter the endpoints manually, e.g. for GitHub.",
         "SettingAuthorizeUrl": "Authorize URL",
         "SettingAuthorizeUrlHelp": "e.g. https://<USERNAME>.eu.auth0.com/authorize",
         "SettingTokenUrl": "Token URL",
@@ -56,6 +58,7 @@
         "ExceptionAlreadyLinkedToDifferentAccount": "The remote OAuth user is already linked to another account.",
         "ExceptionLinkRequiresPasswordConfirmation": "Linking requires a recent password confirmation. Please start linking from your security settings.",
         "ExceptionPasswordLoginDisabled": "Password login is disabled for this account. Please sign in via single sign-on.",
-        "ExceptionButtonColorValidationFailed": "The login button color has to be a hex color like #f97316."
+        "ExceptionButtonColorValidationFailed": "The login button color has to be a hex color like #f97316.",
+        "ExceptionDiscoveryFailed": "OpenID Connect discovery failed for %1$s: %2$s. Check the domain or issuer URL, or leave it empty and enter the endpoints manually."
     }
 }

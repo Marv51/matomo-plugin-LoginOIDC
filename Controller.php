@@ -241,18 +241,19 @@ class Controller extends \Piwik\Plugin\Controller
      */
     private function redirectToProvider(SystemSettings $settings)
     {
+        $provider = new ProviderConfiguration($settings);
         $_SESSION["loginoidc_state"] = $this->generateKey(32);
         $_SESSION["loginoidc_code_verifier"] = $this->generateKey(64);
         $params = array(
             "client_id" => $settings->clientId->getValue(),
-            "scope" => $settings->scope->getValue(),
+            "scope" => $provider->getScope(),
             "redirect_uri"=> $this->getRedirectUri(),
             "state" => $_SESSION["loginoidc_state"],
             "response_type" => "code",
             "code_challenge" => $this->getCodeChallenge($_SESSION["loginoidc_code_verifier"]),
             "code_challenge_method" => "S256"
         );
-        $url = $settings->authorizeUrl->getValue();
+        $url = $provider->getAuthorizeUrl();
         $url .= (parse_url($url, PHP_URL_QUERY) ? "&" : "?") . http_build_query($params);
         Url::redirectToUrl($url);
     }
@@ -269,6 +270,7 @@ class Controller extends \Piwik\Plugin\Controller
         if (!$this->isPluginSetup($settings)) {
             throw new Exception(Piwik::translate("LoginOIDC_ExceptionNotConfigured"));
         }
+        $provider = new ProviderConfiguration($settings);
 
         if ($_SESSION["loginoidc_state"] !== Request::fromGet()->getStringParameter("state")) {
             throw new Exception(Piwik::translate("LoginOIDC_ExceptionStateMismatch"));
@@ -307,7 +309,7 @@ class Controller extends \Piwik\Plugin\Controller
             "User-Agent: LoginOIDC-Matomo-Plugin"
         ));
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_URL, $settings->tokenUrl->getValue());
+        curl_setopt($curl, CURLOPT_URL, $provider->getTokenUrl());
         // request authorization token
         $response = curl_exec($curl);
         curl_close($curl);
@@ -327,13 +329,13 @@ class Controller extends \Piwik\Plugin\Controller
             "User-Agent: LoginOIDC-Matomo-Plugin"
         ));
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_URL, $settings->userinfoUrl->getValue());
+        curl_setopt($curl, CURLOPT_URL, $provider->getUserinfoUrl());
         // request remote userinfo and remote user id
         $response = curl_exec($curl);
         curl_close($curl);
         $result = json_decode($response);
 
-        $userinfoId = $settings->userinfoId->getValue();
+        $userinfoId = $provider->getUserinfoId();
         $providerUserId = $result->$userinfoId;
 
         if (empty($providerUserId)) {
@@ -440,11 +442,7 @@ class Controller extends \Piwik\Plugin\Controller
      */
     private function isPluginSetup($settings) : bool
     {
-        return !empty($settings->authorizeUrl->getValue())
-            && !empty($settings->tokenUrl->getValue())
-            && !empty($settings->userinfoUrl->getValue())
-            && !empty($settings->clientId->getValue())
-            && !empty($settings->clientSecret->getValue());
+        return (new ProviderConfiguration($settings))->isComplete();
     }
 
     /**

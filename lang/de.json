@@ -52,8 +52,11 @@
         "SettingDisablePasswordLoginHelp": "Mit dem OpenID-Connect-Anbieter verknüpfte Benutzer können sich nur noch über den Anbieter anmelden: Passwort-Login, das Erstellen von App-Tokens mit dem Passwort und das Zurücksetzen des Passworts sind für sie deaktiviert. Superuser sind ausgenommen, solange der externe Login für Superuser deaktiviert ist. Behalte einen nicht verknüpften Superuser für den Fall, dass der Anbieter nicht erreichbar ist.",
         "SettingButtonColor": "Farbe des Login-Buttons",
         "SettingButtonColorHelp": "Optionale Hintergrundfarbe des Login-Buttons als Hex-Wert, z. B. #f97316. Die Textfarbe wird automatisch für den besten Kontrast gewählt.",
+        "SettingIssuerUrl": "Domain oder Issuer-URL des Anbieters (OpenID Connect Discovery)",
+        "SettingIssuerUrlHelp": "Matomo liest die Endpunkte aus dem Discovery-Dokument des Anbieters (/.well-known/openid-configuration). Gib die Domain an, z. B. 'idp.example.com', oder die Issuer-URL, falls sie einen Pfad enthält, z. B. 'https://keycloak.example.com/realms/matomo'. Lass das Feld leer, um die Endpunkte manuell einzutragen, z. B. für GitHub.",
         "ExceptionLinkRequiresPasswordConfirmation": "Zum Verknüpfen ist eine aktuelle Passwortbestätigung nötig. Bitte starte das Verknüpfen in deinen Sicherheitseinstellungen.",
         "ExceptionPasswordLoginDisabled": "Der Passwort-Login ist für diesen Account deaktiviert. Bitte melde dich per Single Sign-on an.",
-        "ExceptionButtonColorValidationFailed": "Die Farbe des Login-Buttons muss ein Hex-Wert wie #f97316 sein."
+        "ExceptionButtonColorValidationFailed": "Die Farbe des Login-Buttons muss ein Hex-Wert wie #f97316 sein.",
+        "ExceptionDiscoveryFailed": "OpenID-Connect-Discovery für %1$s ist fehlgeschlagen: %2$s. Prüfe die Domain bzw. Issuer-URL oder lass das Feld leer und trage die Endpunkte manuell ein."
     }
 }

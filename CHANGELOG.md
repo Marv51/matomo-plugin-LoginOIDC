@@ -7,6 +7,7 @@
 * Add option to disable password login, app token creation with the password and password resets for linked users.
 * Show the login button above the login form and add an option for its color.
 * Logout via the provider's end session endpoint now sends `client_id` and returns to Matomo, unless `login_logout_url` is configured.
+* Add OpenID Connect discovery: enter the provider's domain or issuer URL instead of the individual endpoints.
 
 ### 4.1.2
 * Fix disabling OIDC for superusers not having any effect (#68).

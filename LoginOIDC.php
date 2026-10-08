@@ -16,6 +16,7 @@ use Piwik\Container\StaticContainer;
 use Piwik\Db;
 use Piwik\DbHelper;
 use Piwik\FrontController;
+use Piwik\Log;
 use Piwik\Mail;
 use Piwik\Piwik;
 use Piwik\Plugins\Login\Emails\PasswordResetEmail;
@@ -157,11 +158,21 @@ class LoginOIDC extends \Piwik\Plugin
      */
     public function logoutMod()
     {
+        if (empty($_SESSION["loginoidc_auth"])) {
+            return;
+        }
+        // make sure we properly unset the plugins session variable
+        unset($_SESSION['loginoidc_auth']);
+
         $settings = new SystemSettings();
-        $endSessionUrl = $settings->endSessionUrl->getValue();
-        if (!empty($endSessionUrl) && !empty($_SESSION["loginoidc_auth"])) {
-            // make sure we properly unset the plugins session variable
-            unset($_SESSION['loginoidc_auth']);
+        try {
+            $endSessionUrl = (new ProviderConfiguration($settings))->getEndSessionUrl();
+        } catch (Exception $e) {
+            // still log out of Matomo, if the provider cannot be reached
+            Log::warning("LoginOIDC: skipping provider logout, " . $e->getMessage());
+            return;
+        }
+        if (!empty($endSessionUrl)) {
             $endSessionUrl = new Url($endSessionUrl);
             $endSessionUrl->setQueryParameter("client_id", $settings->clientId->getValue());
             if (isset($_SESSION["loginoidc_idtoken"])) {

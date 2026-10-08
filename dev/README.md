@@ -4,7 +4,7 @@ Matomo 5 + MariaDB in Docker, with this plugin mounted read-only and configured
 against a real OpenID Connect provider.
 
 ```bash
-cp dev/.env.example dev/.env   # fill in discovery URL, client id and secret
+cp dev/.env.example dev/.env   # fill in issuer, client id and secret
 dev/setup.sh
 ```
 

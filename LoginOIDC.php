@@ -15,6 +15,7 @@ use Piwik\Config;
 use Piwik\Db;
 use Piwik\DbHelper;
 use Piwik\FrontController;
+use Piwik\Plugins\Login\PasswordVerifier;
 use Piwik\Plugins\LoginOIDC\SystemSettings;
 use Piwik\Plugins\LoginOIDC\Url;
 use Piwik\Request;
@@ -164,7 +165,7 @@ class LoginOIDC extends \Piwik\Plugin
     }
 
     /**
-     * Disable password confirmation when user signed up with LoginOIDC.
+     * Disable password confirmation when user signed in with LoginOIDC.
      * This feature requires Matomo >4.12.0
      *
      * @return void
@@ -173,9 +174,15 @@ class LoginOIDC extends \Piwik\Plugin
     {
         $settings = new SystemSettings();
         $disablePasswordConfirmation = $settings->disablePasswordConfirmation->getValue();
-        if ($disablePasswordConfirmation) {
-            // require password confirmation when user has not signed in with the plugin
-            $requiresPasswordConfirmation = !($_SESSION["loginoidc_auth"] ?? false);
+        if (!$disablePasswordConfirmation) {
+            return;
+        }
+        // only skip the confirmation if this very user has been authenticated by the remote service recently,
+        // using the same time window Matomo grants after a password confirmation
+        $verifiedLogin = $_SESSION["loginoidc_verified_login"] ?? null;
+        $verifiedAt = $_SESSION["loginoidc_verified_at"] ?? 0;
+        if ($verifiedLogin === $login && time() - $verifiedAt < PasswordVerifier::VERIFY_VALID_FOR_MINUTES * 60) {
+            $requiresPasswordConfirmation = false;
         }
     }
 

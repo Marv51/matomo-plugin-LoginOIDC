@@ -49,6 +49,7 @@
         "ExceptionSuperUserOauthDisabled": "OAuth login disabled for superusers.",
         "ExceptionAllowedSignupDomainsValidationFailed": "Validation failed for the list of domains allowed for user creation.",
         "ExceptionAllowedSignupDomainsDenied": "The domain is currently not activated for account creation.",
-        "ExceptionAlreadyLinkedToDifferentAccount": "The remote OAuth user is already linked to another account."
+        "ExceptionAlreadyLinkedToDifferentAccount": "The remote OAuth user is already linked to another account.",
+        "ExceptionLinkRequiresPasswordConfirmation": "Linking requires a recent password confirmation. Please start linking from your security settings."
     }
 }

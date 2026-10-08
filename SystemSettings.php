@@ -35,6 +35,13 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
     public $disablePasswordConfirmation;
 
     /**
+     * Whether users linked to a remote user can only sign in via the remote service.
+     *
+     * @var bool
+     */
+    public $disablePasswordLogin;
+
+    /**
      * Whether the login procedure has to be initiated from the Matomo login page
      *
      * @var bool
@@ -148,6 +155,7 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
     {
         $this->disableSuperuser = $this->createDisableSuperuserSetting();
         $this->disablePasswordConfirmation = $this->createDisablePasswordConfirmationSetting();
+        $this->disablePasswordLogin = $this->createDisablePasswordLoginSetting();
         $this->disableDirectLoginUrl = $this->createDisableDirectLoginUrlSetting();
         $this->allowSignup = $this->createAllowSignupSetting();
         $this->bypassTwoFa = $this->createBypassTwoFaSetting();
@@ -189,6 +197,20 @@ class SystemSettings extends \Piwik\Settings\Plugin\SystemSettings
         return $this->makeSetting("disablePasswordConfirmation", $default = false, FieldConfig::TYPE_BOOL, function(FieldConfig $field) {
             $field->title = Piwik::translate("LoginOIDC_SettingDisablePasswordConfirmation");
             $field->description = Piwik::translate("LoginOIDC_SettingDisablePasswordConfirmationHelp");
+            $field->uiControl = FieldConfig::UI_CONTROL_CHECKBOX;
+        });
+    }
+
+    /**
+     * Add disable password login setting.
+     *
+     * @return SystemSetting
+     */
+    private function createDisablePasswordLoginSetting() : SystemSetting
+    {
+        return $this->makeSetting("disablePasswordLogin", $default = false, FieldConfig::TYPE_BOOL, function(FieldConfig $field) {
+            $field->title = Piwik::translate("LoginOIDC_SettingDisablePasswordLogin");
+            $field->description = Piwik::translate("LoginOIDC_SettingDisablePasswordLoginHelp");
             $field->uiControl = FieldConfig::UI_CONTROL_CHECKBOX;
         });
     }

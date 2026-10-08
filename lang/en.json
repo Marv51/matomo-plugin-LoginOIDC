@@ -4,6 +4,8 @@
         "SettingDisableSuperuserHelp": "",
         "SettingDisablePasswordConfirmation": "Disable password confirmation",
         "SettingDisablePasswordConfirmationHelp": "Certain administrational tasks require a password confirmation. When administrators are using this plugin and do not have a password they could confirm, this option can be used to skip the dialogue, when signed in via LoginOIDC",
+        "SettingDisablePasswordLogin": "Disable password login for linked users",
+        "SettingDisablePasswordLoginHelp": "Users linked to the OpenID Connect provider can only sign in via the provider: password login, creating app tokens with the password and password resets are disabled for them. Superusers are exempt while external login is disabled for superusers. Keep an unlinked superuser in case the provider is unavailable.",
         "SettingDisableDirectLoginUrl": "Disable direct login url",
         "SettingDisableDirectLoginUrlHelp": "When checked, users have to inititate the login via the Matomo login page. Otherwise the login button can be embedded in third-party services.",
         "SettingAllowSignup": "Create new users when users try to log in with unknown OIDC accounts",
@@ -50,6 +52,7 @@
         "ExceptionAllowedSignupDomainsValidationFailed": "Validation failed for the list of domains allowed for user creation.",
         "ExceptionAllowedSignupDomainsDenied": "The domain is currently not activated for account creation.",
         "ExceptionAlreadyLinkedToDifferentAccount": "The remote OAuth user is already linked to another account.",
-        "ExceptionLinkRequiresPasswordConfirmation": "Linking requires a recent password confirmation. Please start linking from your security settings."
+        "ExceptionLinkRequiresPasswordConfirmation": "Linking requires a recent password confirmation. Please start linking from your security settings.",
+        "ExceptionPasswordLoginDisabled": "Password login is disabled for this account. Please sign in via single sign-on."
     }
 }

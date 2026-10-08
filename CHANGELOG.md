@@ -4,6 +4,7 @@
 * Security: Skipping password confirmations now requires a successful sign-in as the same user via LoginOIDC within the last 30 minutes. Previously any completed OAuth round trip disabled them for the rest of the session.
 * Security: Linking a remote account requires a recent password confirmation.
 * Security: Use PKCE (S256) for the authorization code flow.
+* Add option to disable password login, app token creation with the password and password resets for linked users.
 
 ### 4.1.2
 * Fix disabling OIDC for superusers not having any effect (#68).

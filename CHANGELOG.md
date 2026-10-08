@@ -1,6 +1,7 @@
 ## Changelog
 
-### Unreleased
+### 5.1.0
+* First release of this fork of [dominik-th/matomo-plugin-LoginOIDC](https://github.com/dominik-th/matomo-plugin-LoginOIDC). Homepage and support links now point to the fork.
 * Security: Skipping password confirmations now requires a successful sign-in as the same user via LoginOIDC within the last 30 minutes. Previously any completed OAuth round trip disabled them for the rest of the session.
 * Security: Linking a remote account requires a recent password confirmation.
 * Security: Use PKCE (S256) for the authorization code flow.
